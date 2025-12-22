@@ -28,7 +28,7 @@ jobs:
         env:
           MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
         run: |
-          mlflow run MLProject --env-manager=local
+          python modelling.py
 
       - name: Get latest MLflow run_id
         env:
