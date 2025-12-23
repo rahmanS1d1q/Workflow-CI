@@ -24,11 +24,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install mlflow pandas scikit-learn==1.5.2
 
-      - name: Train model via MLflow Project
-        env:
-          MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
-        run: |
-          python modelling.py
+- name: Train model (python)
+  env:
+    MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
+  run: |
+    python MLProject/modelling.py
 
       - name: Get latest MLflow run_id
         env:
