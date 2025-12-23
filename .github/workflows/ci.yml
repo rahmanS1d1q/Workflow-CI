@@ -22,15 +22,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mlflow pandas scikit-learn==1.5.2
+          pip install "mlflow[extras]" pandas scikit-learn==1.5.2 docker
 
       - name: Prepare MLflow tracking dir
-        run: mkdir -p mlruns
+        run: |
+          mkdir -p mlruns
 
       - name: Train model (python)
         env:
           MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
-        run: python MLProject/modelling.py
+        run: |
+          python MLProject/modelling.py
 
       - name: Get latest MLflow run_id
         env:
@@ -59,25 +61,19 @@ jobs:
             raise SystemExit("No MLflow runs found. Training might have failed.")
 
           run_id = latest.info.run_id
+          print("LATEST_RUN_ID=" + run_id)
+
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
             f.write(f"LATEST_RUN_ID={run_id}\n")
-          print("LATEST_RUN_ID=" + run_id)
           PY
 
-      - name: Upload MLflow artifacts
+      - name: Upload MLflow artifacts (Skilled requirement)
         uses: actions/upload-artifact@v4
         with:
           name: mlruns
           path: mlruns
 
-      - name: Debug Docker username presence
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "DOCKERHUB_USERNAME is EMPTY (check environment/secrets)"; exit 1;
-          else
-            echo "DOCKERHUB_USERNAME is set";
-          fi
-
+      # ====== ADVANCE PART: build & push Docker image ======
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -90,13 +86,16 @@ jobs:
         run: |
           IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/telco-churn-mlflow:${{ github.sha }}"
           echo "IMAGE_NAME=$IMAGE" >> $GITHUB_ENV
+
           mlflow models build-docker \
             --model-uri "runs:/${LATEST_RUN_ID}/model" \
             --name "$IMAGE" \
             --env-manager local
 
       - name: Push Docker image
-        run: docker push "$IMAGE_NAME"
+        run: |
+          docker push "$IMAGE_NAME"
 
       - name: Output Docker Hub reference
-        run: echo "Docker Image pushed: $IMAGE_NAME"
+        run: |
+          echo "Docker Image pushed: $IMAGE_NAME"
