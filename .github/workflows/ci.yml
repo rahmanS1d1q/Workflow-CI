@@ -99,5 +99,3 @@ jobs:
       - name: Output Docker Hub reference
         run: |
           echo "Docker Image pushed: $IMAGE_NAME"
-
-gini kannn
